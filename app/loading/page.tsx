@@ -1,10 +1,14 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { useRouter } from "next/navigation"
-import { useAuraStore, auraColorMap, generateAuraDescription } from "@/lib/aura-store"
-import { removeBackground } from "@imgly/background-removal"
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import {
+  useAuraStore,
+  auraColorMap,
+  generateAuraDescription,
+} from "@/lib/aura-store";
+import { removeBackground } from "@imgly/background-removal";
 
 const loadingMessages = [
   "Scanning your energy field...",
@@ -13,48 +17,48 @@ const loadingMessages = [
   "Mapping your chakra alignment...",
   "Synthesizing color signatures...",
   "Generating your unique aura...",
-]
+];
 
 export default function LoadingPage() {
-  const router = useRouter()
-  const { formData, setResult, setIsLoading } = useAuraStore()
-  const [currentMessage, setCurrentMessage] = useState(0)
-  const [progress, setProgress] = useState(0)
+  const router = useRouter();
+  const { formData, setResult, setIsLoading } = useAuraStore();
+  const [currentMessage, setCurrentMessage] = useState(0);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     // Redirect if no form data
     if (!formData.image || !formData.name) {
-      router.push("/questionnaire")
-      return
+      router.push("/questionnaire");
+      return;
     }
 
     // Cycle through messages
     const messageInterval = setInterval(() => {
-      setCurrentMessage((prev) => (prev + 1) % loadingMessages.length)
-    }, 2000)
+      setCurrentMessage((prev) => (prev + 1) % loadingMessages.length);
+    }, 2000);
 
     // Simulate progress
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 95) return prev
-        return prev + Math.random() * 10
-      })
-    }, 300)
+        if (prev >= 95) return prev;
+        return prev + Math.random() * 10;
+      });
+    }, 300);
 
     // Process the image and generate aura
-    processAura()
+    processAura();
 
     return () => {
-      clearInterval(messageInterval)
-      clearInterval(progressInterval)
-    }
-  }, [])
+      clearInterval(messageInterval);
+      clearInterval(progressInterval);
+    };
+  }, []);
 
   const processAura = async () => {
     try {
       // Remove background from image
-      let processedImageUrl = formData.imagePreview || ""
-      
+      let processedImageUrl = formData.imagePreview || "";
+
       if (formData.image) {
         try {
           const blob = await removeBackground(formData.image, {
@@ -62,54 +66,96 @@ export default function LoadingPage() {
             // in environments without cross-origin isolation
             device: "cpu",
             model: "small",
-          })
-          processedImageUrl = URL.createObjectURL(blob)
+          });
+          processedImageUrl = URL.createObjectURL(blob);
         } catch (error) {
-          console.log("[v0] Background removal failed, using original image:", error)
+          console.log(
+            "[v0] Background removal failed, using original image:",
+            error,
+          );
           // If background removal fails, use original image
-          processedImageUrl = formData.imagePreview || ""
+          processedImageUrl = formData.imagePreview || "";
         }
       }
 
-      // Generate aura colors based on mood and personality
-      const moodColors = getMoodColors(formData.mood, formData.personality, formData.energy)
-      
-      // Generate description
-      const description = generateAuraDescription(
-        moodColors.map(c => c.name),
-        formData.name,
-        formData.mood,
-        formData.personality
-      )
+      const processAura = async () => {
+        try {
+          const form = new FormData();
+          form.append("name", formData.name);
+          form.append("mood", formData.mood);
+          form.append("personality", formData.personality);
+          form.append("energy", String(formData.energy));
+
+          if (formData.image) {
+            form.append("image", formData.image);
+          }
+
+          const res = await fetch("/api/aura", {
+            method: "POST",
+            body: form,
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) throw new Error(data.error);
+
+          // Background removal (keep this)
+          let processedImageUrl = formData.imagePreview || "";
+
+          try {
+            if (formData.image) {
+              const blob = await removeBackground(formData.image);
+              processedImageUrl = URL.createObjectURL(blob);
+            }
+          } catch (err) {
+            console.log("BG removal failed");
+          }
+
+          setResult({
+            name: formData.name,
+            colors: data.colors,
+            description: data.description,
+            imageUrl: processedImageUrl,
+          });
+
+          setProgress(100);
+          setIsLoading(false);
+          router.push("/result");
+        } catch (error) {
+          console.error(error);
+          setIsLoading(false);
+          router.push("/questionnaire");
+        }
+      };
 
       // Set result
       setResult({
-        colors: moodColors.map(c => c.name),
+        colors: moodColors.map((c) => c.name),
         description,
         imageUrl: processedImageUrl,
         name: formData.name,
-      })
+      });
 
       // Complete progress and navigate
-      setProgress(100)
-      await new Promise(resolve => setTimeout(resolve, 500))
-      setIsLoading(false)
-      router.push("/result")
+      setProgress(100);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setIsLoading(false);
+      router.push("/result");
     } catch (error) {
-      console.error("[v0] Error processing aura:", error)
-      setIsLoading(false)
-      router.push("/questionnaire")
+      console.error("[v0] Error processing aura:", error);
+      setIsLoading(false);
+      router.push("/questionnaire");
     }
-  }
+  };
 
   const getMoodColors = (mood: string, personality: string, energy: number) => {
-    const colors: { name: string; color: string; glow: string }[] = []
-    
+    const colors: { name: string; color: string; glow: string }[] = [];
+
     // Primary color based on mood
     if (auraColorMap[mood]) {
-      colors.push(auraColorMap[mood])
+      colors.push(auraColorMap[mood]);
     }
-    
+
     // Secondary color based on personality
     const personalityColorMap: Record<string, string> = {
       introvert: "calm",
@@ -118,29 +164,35 @@ export default function LoadingPage() {
       analytical: "intuitive",
       creative: "creative",
       leader: "passionate",
+    };
+
+    const secondaryMood = personalityColorMap[personality];
+    if (
+      secondaryMood &&
+      auraColorMap[secondaryMood] &&
+      auraColorMap[secondaryMood] !== colors[0]
+    ) {
+      colors.push(auraColorMap[secondaryMood]);
     }
-    
-    const secondaryMood = personalityColorMap[personality]
-    if (secondaryMood && auraColorMap[secondaryMood] && auraColorMap[secondaryMood] !== colors[0]) {
-      colors.push(auraColorMap[secondaryMood])
-    }
-    
+
     // Third color based on energy level
     if (energy > 70) {
-      colors.push(auraColorMap.grounded)
+      colors.push(auraColorMap.grounded);
     } else if (energy < 30) {
-      colors.push(auraColorMap.peaceful)
+      colors.push(auraColorMap.peaceful);
     } else {
-      colors.push(auraColorMap.intuitive)
+      colors.push(auraColorMap.intuitive);
     }
-    
+
     // Return unique colors (max 3)
-    const uniqueColors = colors.filter((c, i, arr) => 
-      arr.findIndex(x => x.name === c.name) === i
-    ).slice(0, 3)
-    
-    return uniqueColors.length > 0 ? uniqueColors : [auraColorMap.creative, auraColorMap.calm, auraColorMap.peaceful]
-  }
+    const uniqueColors = colors
+      .filter((c, i, arr) => arr.findIndex((x) => x.name === c.name) === i)
+      .slice(0, 3);
+
+    return uniqueColors.length > 0
+      ? uniqueColors
+      : [auraColorMap.creative, auraColorMap.calm, auraColorMap.peaceful];
+  };
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -192,7 +244,7 @@ export default function LoadingPage() {
               }}
             />
           ))}
-          
+
           {/* Center pulse */}
           <motion.div
             className="absolute inset-0 flex items-center justify-center"
@@ -239,5 +291,5 @@ export default function LoadingPage() {
         </div>
       </div>
     </main>
-  )
+  );
 }
