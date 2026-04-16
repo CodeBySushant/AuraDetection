@@ -1,0 +1,7 @@
+numpy==1.26.4
+scipy==1.11.4
+rembg==2.0.56
+onnxruntime==1.17.3
+opencv-python
+Pillow==10.2.0
+deepface==0.0.93
