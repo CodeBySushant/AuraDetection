@@ -3,7 +3,7 @@ import base64
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pipeline import run_pipeline
+from aura_pipeline import run_aura_pipeline
 
 app = FastAPI()
 

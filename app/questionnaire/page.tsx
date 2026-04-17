@@ -5,18 +5,20 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { useDropzone } from "react-dropzone"
 import { Upload, User, Sparkles, Zap, Brain, ImageIcon, ArrowLeft, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/frontend/components/ui/button"
+import { Input } from "@/frontend/components/ui/input"
+import { Label } from "@/frontend/components/ui/label"
+import { Slider } from "@/frontend/components/ui/slider"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/frontend/components/ui/select"
 import { useAuraStore, moodOptions, personalityOptions } from "@/lib/aura-store"
 import Link from "next/link"
+import { chakraQuestions } from "@/data/chakraQuestions";
 
 export default function QuestionnairePage() {
   const router = useRouter()
   const { formData, setFormData, setIsLoading } = useAuraStore()
   const [step, setStep] = useState(0)
+  const [answers, setAnswers] = useState<number[]>(Array(49).fill(0));
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
