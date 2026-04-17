@@ -43,80 +43,98 @@ function generateDescription(colors: string[], name: string, mood: string, perso
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    
+
     const name = formData.get("name") as string
     const mood = formData.get("mood") as string
     const personality = formData.get("personality") as string
     const energy = parseInt(formData.get("energy") as string) || 50
     const image = formData.get("image") as File | null
 
-    // Validate required fields
-    if (!name || !mood || !personality) {
+    if (!name || !mood || !personality || !image) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       )
     }
 
-    // Generate emotion scores (mock AI processing)
-    const emotions = {
-      happy: mood === "happy" ? 0.8 : Math.random() * 0.4,
-      calm: mood === "calm" ? 0.8 : Math.random() * 0.4,
-      energetic: mood === "energetic" ? 0.8 : Math.random() * 0.4,
-      creative: mood === "creative" ? 0.8 : Math.random() * 0.4,
+    // 🔥 STEP 1: Call AI backend
+    const aiForm = new FormData()
+    aiForm.append("file", image)
+
+    const aiRes = await fetch("http://localhost:8001/api/aura/process", {
+      method: "POST",
+      body: aiForm,
+    })
+
+    if (!aiRes.ok) {
+      return NextResponse.json(
+        { error: "AI pipeline failed" },
+        { status: 500 }
+      )
     }
 
-    // Determine aura colors
+    const aiData = await aiRes.json()
+
+    // 🔥 STEP 2: Build color logic properly
     const colors: string[] = []
 
-    // Primary color from mood
-    if (auraColorMap[mood]) {
-      colors.push(auraColorMap[mood].name)
+    // Primary → AI emotion mapped to your colors
+    if (auraColorMap[aiData.emotion]) {
+      colors.push(auraColorMap[aiData.emotion].name)
     }
 
-    // Secondary color from personality
-    const secondaryEmotion = personalityEmotionMap[personality]
-    if (secondaryEmotion && auraColorMap[secondaryEmotion]) {
-      const colorName = auraColorMap[secondaryEmotion].name
-      if (!colors.includes(colorName)) {
-        colors.push(colorName)
+    // Secondary → user mood
+    if (auraColorMap[mood]) {
+      const moodColor = auraColorMap[mood].name
+      if (!colors.includes(moodColor)) {
+        colors.push(moodColor)
       }
     }
 
-    // Third color based on energy level
-    if (energy > 70) {
-      if (!colors.includes("Orange")) colors.push("Orange")
-    } else if (energy < 30) {
-      if (!colors.includes("Green")) colors.push("Green")
-    } else {
-      if (!colors.includes("Indigo")) colors.push("Indigo")
+    // Third → personality
+    const personalityEmotion = personalityEmotionMap[personality]
+    if (personalityEmotion && auraColorMap[personalityEmotion]) {
+      const pColor = auraColorMap[personalityEmotion].name
+      if (!colors.includes(pColor)) {
+        colors.push(pColor)
+      }
     }
 
-    // Ensure we have at least 2 colors
+    // Fourth → energy adjustment
+    if (energy > 70 && !colors.includes("Orange")) {
+      colors.push("Orange")
+    } else if (energy < 30 && !colors.includes("Green")) {
+      colors.push("Green")
+    }
+
+    // Ensure at least 2 colors
     if (colors.length < 2) {
       colors.push("Purple")
     }
 
-    // Limit to 3 colors
     const finalColors = colors.slice(0, 3)
 
-    // Generate description
-    const description = generateDescription(finalColors, name, mood, personality)
+    // 🔥 STEP 3: Use your original smart description
+    const description = generateDescription(
+      finalColors,
+      name,
+      aiData.emotion || mood,
+      personality
+    )
 
-    // In a production app, we would:
-    // 1. Upload image to Cloudinary
-    // 2. Call background removal API
-    // 3. Return processed image URL
-    // For now, we'll handle image processing on the client side
-
+    // 🔥 FINAL RESPONSE
     return NextResponse.json({
       colors: finalColors,
       description,
-      emotions,
-      imageUrl: null, // Client handles image processing
+      emotion: aiData.emotion,
+      confidence: aiData.confidence,
+      chakra: aiData.chakra,
+      image: aiData.image,
     })
+
   } catch (error) {
-    console.error("[v0] Aura API error:", error)
+    console.error("Aura API error:", error)
+
     return NextResponse.json(
       { error: "Failed to process aura" },
       { status: 500 }

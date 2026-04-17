@@ -1,19 +1,20 @@
-"use client"
+"use client";
 
-import { forwardRef } from "react"
-import { motion } from "framer-motion"
-import type { AuraResult } from "@/lib/aura-store"
+import { forwardRef } from "react";
+import { motion } from "framer-motion";
+import type { AuraResult } from "@/lib/aura-store";
+import { getAuraImageSrc } from "@/lib/aura-store";
 
 interface AuraCardProps {
-  result: AuraResult
-  auraColors: { name: string; color: string; glow: string }[]
+  result: AuraResult;
+  auraColors: { name: string; color: string; glow: string }[];
 }
 
 export const AuraCard = forwardRef<HTMLDivElement, AuraCardProps>(
   ({ result, auraColors }, ref) => {
-    // Generate gradient based on aura colors
-    const gradientColors = auraColors.map(c => c.color).join(", ")
-    const glowColor = auraColors[0]?.glow || "rgba(139, 92, 246, 0.6)"
+    const gradientColors = auraColors.map((c) => c.color).join(", ");
+    const glowColor =
+      auraColors[0]?.glow || "rgba(139, 92, 246, 0.6)";
 
     return (
       <div
@@ -23,7 +24,7 @@ export const AuraCard = forwardRef<HTMLDivElement, AuraCardProps>(
           boxShadow: `0 0 60px ${glowColor}, 0 0 120px ${glowColor}`,
         }}
       >
-        {/* Aura glow background */}
+        {/* 🌈 Background Aura Glow */}
         <div className="absolute inset-0 overflow-hidden">
           {auraColors.map((color, i) => (
             <motion.div
@@ -34,7 +35,11 @@ export const AuraCard = forwardRef<HTMLDivElement, AuraCardProps>(
                 height: "200%",
                 left: "-50%",
                 top: "-50%",
-                background: `radial-gradient(circle at ${50 + (i - 1) * 20}% ${50 + (i - 1) * 10}%, ${color.glow} 0%, transparent 50%)`,
+                background: `radial-gradient(circle at ${
+                  50 + (i - 1) * 20
+                }% ${50 + (i - 1) * 10}%, ${
+                  color.glow
+                } 0%, transparent 50%)`,
                 filter: "blur(40px)",
               }}
               animate={{
@@ -51,9 +56,9 @@ export const AuraCard = forwardRef<HTMLDivElement, AuraCardProps>(
           ))}
         </div>
 
-        {/* Card content */}
+        {/* 📦 Card Content */}
         <div className="relative z-10">
-          {/* Aura Colors Title */}
+          {/* Title */}
           <div className="mb-4 text-center">
             <p className="text-xs font-medium uppercase tracking-widest text-white/60">
               Your Aura
@@ -68,9 +73,9 @@ export const AuraCard = forwardRef<HTMLDivElement, AuraCardProps>(
             </h2>
           </div>
 
-          {/* User Image with Aura */}
+          {/* 🧑 Image with Aura */}
           <div className="relative mx-auto mb-4 h-56 w-56">
-            {/* Outer aura glow rings */}
+            {/* Glow Rings */}
             {auraColors.map((color, i) => (
               <motion.div
                 key={i}
@@ -81,7 +86,11 @@ export const AuraCard = forwardRef<HTMLDivElement, AuraCardProps>(
                   filter: "blur(20px)",
                 }}
                 animate={{
-                  scale: [1.3 + i * 0.2, 1.5 + i * 0.2, 1.3 + i * 0.2],
+                  scale: [
+                    1.3 + i * 0.2,
+                    1.5 + i * 0.2,
+                    1.3 + i * 0.2,
+                  ],
                   opacity: [0.4, 0.6, 0.4],
                 }}
                 transition={{
@@ -92,37 +101,38 @@ export const AuraCard = forwardRef<HTMLDivElement, AuraCardProps>(
               />
             ))}
 
-            {/* Image container */}
+            {/* Image */}
             <div className="absolute inset-4 overflow-hidden rounded-full ring-2 ring-white/20">
-              {result.imageUrl ? (
-                <img
-                  src={result.imageUrl}
-                  alt={result.name}
-                  className="h-full w-full object-cover"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20">
-                  <span className="text-4xl font-bold text-white/40">
-                    {result.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
+              <img
+                src={getAuraImageSrc(result)}
+                alt="Aura"
+                className="h-full w-full object-cover"
+              />
             </div>
           </div>
 
-          {/* Name */}
-          <h3 className="mb-3 text-center text-xl font-semibold text-white">
-            {result.name}
-          </h3>
-
-          {/* Description */}
+          {/* 📄 Description */}
           <p className="mb-4 text-center text-sm leading-relaxed text-white/70">
             {result.description}
           </p>
 
-          {/* Color indicators */}
-          <div className="flex justify-center gap-2">
+          {/* 🔥 AI Info (NEW) */}
+          <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white/80">
+              {result.emotion}
+            </span>
+
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white/80">
+              {result.chakra} chakra
+            </span>
+
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white/80">
+              {Math.round(result.confidence * 100)}% confidence
+            </span>
+          </div>
+
+          {/* 🎨 Color indicators */}
+          <div className="mt-4 flex justify-center gap-2">
             {auraColors.map((color, i) => (
               <div
                 key={i}
@@ -143,12 +153,12 @@ export const AuraCard = forwardRef<HTMLDivElement, AuraCardProps>(
           </div>
         </div>
 
-        {/* Decorative elements */}
+        {/* Decorative */}
         <div className="absolute left-4 top-4 h-20 w-20 rounded-full border border-white/5" />
         <div className="absolute bottom-4 right-4 h-16 w-16 rounded-full border border-white/5" />
       </div>
-    )
+    );
   }
-)
+);
 
-AuraCard.displayName = "AuraCard"
+AuraCard.displayName = "AuraCard";

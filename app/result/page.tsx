@@ -1,98 +1,95 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
-import { motion } from "framer-motion"
-import { useRouter } from "next/navigation"
-import { Download, Share2, RotateCcw } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useAuraStore, auraColorMap } from "@/lib/aura-store"
-import { AuraCard } from "@/components/aura-card"
-import { toPng } from "html-to-image"
-import Link from "next/link"
+import { useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { Download, Share2, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuraStore, auraColorMap } from "@/lib/aura-store";
+import { AuraCard } from "@/components/aura-card";
+import { toPng } from "html-to-image";
 
 export default function ResultPage() {
-  const router = useRouter()
-  const { result, reset } = useAuraStore()
-  const cardRef = useRef<HTMLDivElement>(null)
+  const router = useRouter();
+  const { result, formData, reset } = useAuraStore(); // ✅ include formData
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!result) {
-      router.push("/questionnaire")
+      router.push("/questionnaire");
     }
-  }, [result, router])
+  }, [result, router]);
 
   const handleDownload = async () => {
-    if (!cardRef.current) return
-    
+    if (!cardRef.current) return;
+
     try {
       const dataUrl = await toPng(cardRef.current, {
         quality: 1,
         pixelRatio: 2,
         backgroundColor: "#1a0533",
-      })
-      
-      const link = document.createElement("a")
-      link.download = `${result?.name || "aura"}-aura-card.png`
-      link.href = dataUrl
-      link.click()
+      });
+
+      const link = document.createElement("a");
+      link.download = `${formData.name || "aura"}-aura-card.png`; // ✅ fixed
+      link.href = dataUrl;
+      link.click();
     } catch (error) {
-      console.error("[v0] Failed to download card:", error)
+      console.error("Failed to download card:", error);
     }
-  }
+  };
 
   const handleShare = async () => {
-    if (!cardRef.current) return
-    
+    if (!cardRef.current) return;
+
     try {
       const dataUrl = await toPng(cardRef.current, {
         quality: 1,
         pixelRatio: 2,
         backgroundColor: "#1a0533",
-      })
-      
-      const blob = await (await fetch(dataUrl)).blob()
-      const file = new File([blob], "aura-card.png", { type: "image/png" })
-      
+      });
+
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], "aura-card.png", { type: "image/png" });
+
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: "My Aura Card",
           text: "Check out my personalized aura card!",
           files: [file],
-        })
+        });
       } else {
-        // Fallback: copy to clipboard
         await navigator.clipboard.write([
           new ClipboardItem({ "image/png": blob }),
-        ])
-        alert("Card copied to clipboard!")
+        ]);
+        alert("Card copied to clipboard!");
       }
     } catch (error) {
-      console.error("[v0] Failed to share card:", error)
+      console.error("Failed to share card:", error);
     }
-  }
+  };
 
   const handleStartOver = () => {
-    reset()
-    router.push("/")
-  }
+    reset();
+    router.push("/");
+  };
 
   if (!result) {
-    return null
+    return null;
   }
 
-  // Get color objects for the aura
-  const auraColors = result.colors.map(colorName => {
+  // ✅ Map color names → actual color objects
+  const auraColors = result.colors.map((colorName) => {
     const colorKey = Object.keys(auraColorMap).find(
-      key => auraColorMap[key].name === colorName
-    )
-    return colorKey ? auraColorMap[colorKey] : auraColorMap.creative
-  })
+      (key) => auraColorMap[key].name === colorName
+    );
+    return colorKey ? auraColorMap[colorKey] : auraColorMap.creative;
+  });
 
   return (
     <main className="relative min-h-screen overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#1a0533] via-[#0d1b3c] to-[#1a0533]">
-        {/* Dynamic glow based on aura colors */}
         {auraColors.map((color, i) => (
           <motion.div
             key={i}
@@ -128,7 +125,9 @@ export default function ResultPage() {
             Your Aura Revealed
           </h1>
           <p className="mt-2 text-muted-foreground">
-            {result.name}, here&apos;s your unique energy signature
+            {formData.name
+              ? `${formData.name}, here's your unique energy signature`
+              : "Here’s your unique energy signature"}
           </p>
         </motion.div>
 
@@ -139,42 +138,37 @@ export default function ResultPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-8"
         >
-          <AuraCard ref={cardRef} result={result} auraColors={auraColors} />
+          <AuraCard
+            ref={cardRef}
+            result={result}
+            auraColors={auraColors}
+          />
         </motion.div>
 
-        {/* Action Buttons */}
+        {/* Buttons */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
           className="flex flex-wrap justify-center gap-3"
         >
-          <Button
-            onClick={handleDownload}
-            className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
-          >
+          <Button onClick={handleDownload}>
             <Download className="mr-2 h-4 w-4" />
-            Download Card
+            Download
           </Button>
-          <Button
-            onClick={handleShare}
-            variant="outline"
-            className="border-border/50 bg-card/30 backdrop-blur-sm"
-          >
+
+          <Button onClick={handleShare} variant="outline">
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </Button>
-          <Button
-            onClick={handleStartOver}
-            variant="ghost"
-            className="text-muted-foreground hover:text-foreground"
-          >
+
+          <Button onClick={handleStartOver} variant="ghost">
             <RotateCcw className="mr-2 h-4 w-4" />
             Start Over
           </Button>
         </motion.div>
 
-        {/* Aura Info */}
+        {/* Color Info */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -184,22 +178,23 @@ export default function ResultPage() {
           <h2 className="mb-4 text-lg font-semibold text-foreground">
             About Your Aura Colors
           </h2>
+
           <div className="flex flex-wrap justify-center gap-2">
             {auraColors.map((color, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm backdrop-blur-sm"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm"
               >
                 <span
                   className="h-3 w-3 rounded-full"
                   style={{ backgroundColor: color.color }}
                 />
-                <span className="text-foreground">{color.name}</span>
+                <span>{color.name}</span>
               </span>
             ))}
           </div>
         </motion.div>
       </div>
     </main>
-  )
+  );
 }
