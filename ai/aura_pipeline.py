@@ -7,24 +7,24 @@ from deepface import DeepFace
 
 # ── Chakra map ────────────────────────────────────────────────────────────────
 CHAKRA_MAP = {
-    "happy":    {"color": (255, 223,   0), "chakra": "Solar Plexus", "hex": "#FFDF00"},
-    "sad":      {"color": ( 30, 100, 210), "chakra": "Throat",       "hex": "#1E64D2"},
-    "angry":    {"color": (220,  30,  30), "chakra": "Root",         "hex": "#DC1E1E"},
-    "fear":     {"color": (128,   0, 200), "chakra": "Crown",        "hex": "#8000C8"},
-    "disgust":  {"color": (100, 170,  30), "chakra": "Heart",        "hex": "#64AA1E"},
-    "surprise": {"color": (255, 140,   0), "chakra": "Sacral",       "hex": "#FF8C00"},
-    "neutral":  {"color": ( 50, 200, 120), "chakra": "Heart",        "hex": "#32C878"},
+    "happy": {"color": (255, 223, 0), "chakra": "Solar Plexus", "hex": "#FFDF00"},
+    "sad": {"color": (30, 100, 210), "chakra": "Throat", "hex": "#1E64D2"},
+    "angry": {"color": (220, 30, 30), "chakra": "Root", "hex": "#DC1E1E"},
+    "fear": {"color": (128, 0, 200), "chakra": "Crown", "hex": "#8000C8"},
+    "disgust": {"color": (100, 170, 30), "chakra": "Heart", "hex": "#64AA1E"},
+    "surprise": {"color": (255, 140, 0), "chakra": "Sacral", "hex": "#FF8C00"},
+    "neutral": {"color": (50, 200, 120), "chakra": "Heart", "hex": "#32C878"},
 }
 
 # Secondary color blend per emotion (makes aura unique)
 SECONDARY_MAP = {
-    "happy":    (255, 165,   0),   # orange warmth
-    "sad":      ( 80,  80, 180),   # deeper blue
-    "angry":    (200,   0, 100),   # magenta-red
-    "fear":     ( 60,   0, 140),   # dark indigo
-    "disgust":  ( 60, 130,  20),   # dark green
-    "surprise": (255, 200,  50),   # golden yellow
-    "neutral":  ( 20, 160, 200),   # teal
+    "happy": (255, 165, 0),  # orange warmth
+    "sad": (80, 80, 180),  # deeper blue
+    "angry": (200, 0, 100),  # magenta-red
+    "fear": (60, 0, 140),  # dark indigo
+    "disgust": (60, 130, 20),  # dark green
+    "surprise": (255, 200, 50),  # golden yellow
+    "neutral": (20, 160, 200),  # teal
 }
 
 
@@ -53,20 +53,26 @@ def detect_emotion(original_image: Image.Image):
     for backend in backends:
         try:
             results = DeepFace.analyze(
-                img_path          = img_bgr,
-                actions           = ["emotion"],
-                enforce_detection = (backend != "skip"),
-                detector_backend  = backend,
-                silent            = True,
+                img_path=img_bgr,
+                actions=["emotion"],
+                enforce_detection=(backend != "skip"),
+                detector_backend=backend,
+                silent=True,
             )
 
-            face       = results[0]
-            emotion    = face["dominant_emotion"]
-            all_scores = face["emotion"]                        # dict: emotion → float (0-100)
-            confidence = all_scores[emotion] / 100.0
+            face = results[0]
+            emotion = face["dominant_emotion"]
+            all_scores = {
+                k: float(v) for k, v in face["emotion"].items()
+            }  # dict: emotion → float (0-100)
+            confidence = float(all_scores[emotion]) / 100.0
 
-            print(f"[pipeline] Backend={backend} | Emotion={emotion.upper()} | Confidence={confidence:.2%}")
-            print(f"[pipeline] All scores: { {k: f'{v:.1f}%' for k, v in sorted(all_scores.items(), key=lambda x: -x[1])} }")
+            print(
+                f"[pipeline] Backend={backend} | Emotion={emotion.upper()} | Confidence={confidence:.2%}"
+            )
+            print(
+                f"[pipeline] All scores: { {k: f'{v:.1f}%' for k, v in sorted(all_scores.items(), key=lambda x: -x[1])} }"
+            )
 
             return emotion, confidence, all_scores
 
@@ -101,27 +107,27 @@ def generate_aura(
     - Tertiary accent: 3rd-highest adds depth
     - Layering, blur, halo all vary per-person based on scores
     """
-    w, h   = fg_image.size
+    w, h = fg_image.size
     cx, cy = w // 2, h // 2
 
     # Sort all emotions by score descending
     ranked = sorted(all_scores.items(), key=lambda x: -x[1])
-    dom_name,  dom_score  = ranked[0]
-    sec_name,  sec_score  = ranked[1] if len(ranked) > 1 else ("neutral", 0)
-    tri_name,  tri_score  = ranked[2] if len(ranked) > 2 else ("neutral", 0)
+    dom_name, dom_score = ranked[0]
+    sec_name, sec_score = ranked[1] if len(ranked) > 1 else ("neutral", 0)
+    tri_name, tri_score = ranked[2] if len(ranked) > 2 else ("neutral", 0)
 
-    primary_rgb   = chakra_color
+    primary_rgb = chakra_color
     secondary_rgb = SECONDARY_MAP.get(sec_name, (100, 100, 200))
-    tertiary_rgb  = SECONDARY_MAP.get(tri_name, (200, 200, 100))
+    tertiary_rgb = SECONDARY_MAP.get(tri_name, (200, 200, 100))
 
     sec_weight = sec_score / 100.0
     tri_weight = tri_score / 100.0
 
     canvas = Image.new("RGBA", (w, h), (0, 0, 0, 255))
-    draw   = ImageDraw.Draw(canvas)
+    draw = ImageDraw.Draw(canvas)
 
     num_layers = 24
-    max_alpha  = int(70 + confidence * 160)   # 70–230 range
+    max_alpha = int(70 + confidence * 160)  # 70–230 range
 
     # ── Main radial layers (primary + secondary blend) ────────────────────────
     for i in range(num_layers, 0, -1):
@@ -129,7 +135,7 @@ def generate_aura(
         alpha = int(max_alpha * (1 - frac) ** 1.4)
 
         # Blend primary → secondary based on secondary weight and ring position
-        blend_t = frac * sec_weight                              # outer rings show secondary
+        blend_t = frac * sec_weight  # outer rings show secondary
         r = int(primary_rgb[0] * (1 - blend_t) + secondary_rgb[0] * blend_t)
         g = int(primary_rgb[1] * (1 - blend_t) + secondary_rgb[1] * blend_t)
         b = int(primary_rgb[2] * (1 - blend_t) + secondary_rgb[2] * blend_t)
@@ -153,9 +159,13 @@ def generate_aura(
         offset_y = int(h * 0.08 * (tri_weight - 0.05))
         tr, tg, tb = tertiary_rgb
         draw.ellipse(
-            [cx - int(w*0.55) + offset_x, cy - int(h*0.55) - offset_y,
-             cx + int(w*0.55) + offset_x, cy + int(h*0.55) - offset_y],
-            fill=(tr, tg, tb, accent_alpha)
+            [
+                cx - int(w * 0.55) + offset_x,
+                cy - int(h * 0.55) - offset_y,
+                cx + int(w * 0.55) + offset_x,
+                cy + int(h * 0.55) - offset_y,
+            ],
+            fill=(tr, tg, tb, accent_alpha),
         )
 
     # ── Gaussian blur — strength varies with confidence ───────────────────────
@@ -163,16 +173,15 @@ def generate_aura(
     canvas = canvas.filter(ImageFilter.GaussianBlur(radius=blur_radius))
 
     # ── Outer diffuse halo ────────────────────────────────────────────────────
-    halo      = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    halo = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     halo_draw = ImageDraw.Draw(halo)
 
     # Primary halo
     pr, pg, pb = primary_rgb
     halo_alpha = int(25 + confidence * 55)
     halo_draw.ellipse(
-        [cx - int(w*0.9), cy - int(h*0.9),
-         cx + int(w*0.9), cy + int(h*0.9)],
-        fill=(pr, pg, pb, halo_alpha)
+        [cx - int(w * 0.9), cy - int(h * 0.9), cx + int(w * 0.9), cy + int(h * 0.9)],
+        fill=(pr, pg, pb, halo_alpha),
     )
 
     # Secondary halo (offset)
@@ -180,12 +189,16 @@ def generate_aura(
         sr, sg, sb = secondary_rgb
         sec_halo_alpha = int(sec_weight * 50)
         halo_draw.ellipse(
-            [cx - int(w*0.7), cy - int(h*0.8),
-             cx + int(w*0.7), cy + int(h*0.8)],
-            fill=(sr, sg, sb, sec_halo_alpha)
+            [
+                cx - int(w * 0.7),
+                cy - int(h * 0.8),
+                cx + int(w * 0.7),
+                cy + int(h * 0.8),
+            ],
+            fill=(sr, sg, sb, sec_halo_alpha),
         )
 
-    halo   = halo.filter(ImageFilter.GaussianBlur(radius=55))
+    halo = halo.filter(ImageFilter.GaussianBlur(radius=55))
     canvas = Image.alpha_composite(canvas, halo)
 
     # ── Composite foreground onto aura ────────────────────────────────────────
@@ -220,16 +233,16 @@ def run_pipeline(image_bytes: bytes) -> dict:
 
     # Build ranked emotion list for frontend
     ranked_emotions = [
-        {"emotion": k, "score": round(v, 2)}
+        {"emotion": k, "score": round(float(v), 2)}
         for k, v in sorted(all_scores.items(), key=lambda x: -x[1])
     ]
 
     return {
-        "emotion":          emotion,
-        "confidence":       round(confidence, 4),
-        "chakra":           chakra["chakra"],
-        "hex":              chakra["hex"],
-        "all_scores":       all_scores,          # raw dict
-        "ranked_emotions":  ranked_emotions,     # sorted list for UI
-        "image_bytes":      out.getvalue(),
+        "emotion": str(emotion),
+        "confidence": float(round(confidence, 4)),
+        "chakra": str(chakra["chakra"]),
+        "hex": str(chakra["hex"]),
+        "all_scores": all_scores,  # now safe
+        "ranked_emotions": ranked_emotions,
+        "image_bytes": out.getvalue(),
     }

@@ -20,6 +20,7 @@ const EMOTION_LABELS: Record<string, string> = {
 };
 
 export const AuraCard = forwardRef<HTMLDivElement, AuraCardProps>(({ result }, ref) => {
+  console.log("AuraCard image:", result.image?.slice(0, 50));
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const primaryKey  = result.emotion.toLowerCase();
