@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { calculateChakras } from "@/lib/chakra-utils";
+import { calculateChakras } from "../../../lib/chakra-utils";
 
 export async function POST(req: Request) {
   const { answers } = await req.json();

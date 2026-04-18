@@ -2,14 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { chakraInfo } from "@/lib/chakra-utils";
+import { generateChakraReport } from "@/lib/chakra-insights";
 import Link from "next/link";
 
+type ChakraData = {
+  score: number;
+  state: string;
+};
+
 export default function ChakraResultPage() {
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Record<string, ChakraData> | null>(null);
+  const [report, setReport] = useState<any>(null);
 
   useEffect(() => {
     const data = localStorage.getItem("chakraResult");
-    if (data) setResult(JSON.parse(data));
+
+    if (data) {
+      const parsed = JSON.parse(data);
+      setResult(parsed);
+
+      const generatedReport = generateChakraReport(parsed);
+      setReport(generatedReport);
+    }
   }, []);
 
   // 🔴 EMPTY STATE
@@ -28,17 +42,16 @@ export default function ChakraResultPage() {
 
   const entries = Object.entries(result);
 
-  // 🔥 FIX: convert score to number
+  // ✅ SAFE SORT
   const sorted = [...entries].sort(
-    (a: any, b: any) => Number(b[1].score) - Number(a[1].score)
+    (a, b) => Number(b[1].score) - Number(a[1].score)
   );
 
   const strongest = sorted[0];
   const weakest = sorted[sorted.length - 1];
 
-  // 🔥 Overall score
   const avgScore =
-    entries.reduce((sum: number, item: any) => sum + Number(item[1].score), 0) /
+    entries.reduce((sum, item) => sum + Number(item[1].score), 0) /
     entries.length;
 
   return (
@@ -82,7 +95,7 @@ export default function ChakraResultPage() {
 
         {/* CHAKRA CARDS */}
         <div className="grid md:grid-cols-2 gap-6">
-          {entries.map(([chakra, data]: any) => {
+          {entries.map(([chakra, data]) => {
             const info = chakraInfo[chakra] || {
               color: "#999",
               description: "No description available",
@@ -93,10 +106,9 @@ export default function ChakraResultPage() {
                 key={chakra}
                 className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:scale-[1.02] transition"
               >
-                {/* Title */}
                 <div className="flex justify-between items-center mb-3">
                   <h2 className="text-lg font-semibold">
-                    {chakra} Chakra
+                    {chakra}
                   </h2>
 
                   <span
@@ -112,7 +124,6 @@ export default function ChakraResultPage() {
                   </span>
                 </div>
 
-                {/* Progress Bar */}
                 <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden mb-2">
                   <div
                     className="h-full transition-all duration-700"
@@ -123,17 +134,58 @@ export default function ChakraResultPage() {
                   />
                 </div>
 
-                {/* Score */}
                 <p className="text-sm text-gray-400 mb-2">
                   Score: {data.score}%
                 </p>
 
-                {/* Description */}
                 <p className="text-sm">{info.description}</p>
               </div>
             );
           })}
         </div>
+
+        {/* 🧠 INSIGHT REPORT */}
+        {report ? (
+          <div className="mt-10 space-y-6">
+            <h2 className="text-2xl font-bold text-center">
+              🧠 Insight Report
+            </h2>
+
+            <div className="bg-white/5 p-6 rounded-xl border border-white/10 space-y-4">
+              <p>
+                <strong>Summary:</strong> {report.summary}
+              </p>
+
+              <p>
+                <strong>Personality Insight:</strong>{" "}
+                {report.personalityInsight}
+              </p>
+
+              <p>
+                <strong>Strength:</strong> {report.strength}
+              </p>
+
+              <p>
+                <strong>Weakness:</strong> {report.weakness}
+              </p>
+
+              <div>
+                <strong>Recommendations:</strong>
+                <ul className="list-disc ml-5 mt-2">
+                  {(report.recommendations || []).map(
+                    (rec: string, i: number) => (
+                      <li key={i}>{rec}</li>
+                    )
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-center text-gray-400">
+            Generating insights...
+          </p>
+        )}
 
         {/* ACTION BUTTON */}
         <div className="text-center pt-6">

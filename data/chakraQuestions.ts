@@ -1,27 +1,86 @@
 export const chakraQuestions = [
   {
-    chakra: "Root",
+    chakra: "Root Chakra",
     questions: [
       "I feel physically safe and secure in my daily life.",
-      "I trust that my basic needs are met.",
-      "I feel stable and grounded.",
-      "I feel a sense of belonging.",
-      "I can face challenges without fear.",
-      "I feel present in the physical world.",
-      "I feel comfortable in my body."
-    ]
+      "I trust that my basic needs — food, shelter, and income — are reliably met.",
+      "I feel stable and grounded, even when life becomes uncertain.",
+      "I feel a sense of belonging in my home, community, or family.",
+      "I can face challenges without being overwhelmed by fear or anxiety.",
+      "I feel present and connected to the physical world around me.",
+      "I have consistent energy and feel at home in my body.",
+    ],
   },
   {
-    chakra: "Sacral",
+    chakra: "Sacral Chakra",
     questions: [
-      "I express my emotions freely.",
-      "I feel passion in life.",
-      "I enjoy creativity.",
-      "I allow myself pleasure.",
-      "I feel warmth in relationships.",
-      "I adapt to change easily.",
-      "I feel connected to my body."
-    ]
+      "I allow myself to feel and express my emotions without suppressing them.",
+      "I feel a sense of passion and enthusiasm in my daily life.",
+      "I engage in creative activities and enjoy the process of creating.",
+      "I give myself permission to experience pleasure, play, and enjoyment.",
+      "I feel at ease giving and receiving warmth and affection in my relationships.",
+      "I flow with change rather than resisting it.",
+      "I feel a healthy, comfortable connection to my body and its sensations.",
+    ],
   },
-  // continue for all 7 chakras...
+  {
+    chakra: "Solar Plexus Chakra",
+    questions: [
+      "I feel confident in my abilities and strengths.",
+      "I make decisions without excessive hesitation or self-doubt.",
+      "I stand up for myself when my boundaries are crossed.",
+      "I follow through on my commitments and goals.",
+      "I take responsibility for my choices and their outcomes.",
+      "I feel a clear sense of direction and purpose in my life.",
+      "I act from my own values rather than seeking constant approval from others.",
+    ],
+  },
+  {
+    chakra: "Heart Chakra",
+    questions: [
+      "I accept myself fully, including my flaws and imperfections.",
+      "I am able to forgive others without holding onto resentment.",
+      "I feel genuine compassion for the people around me.",
+      "I am comfortable both giving and receiving love.",
+      "I feel emotionally open and connected to those close to me.",
+      "I can be present with someone else's pain without pulling away.",
+      "I treat myself with the same kindness I would offer a close friend.",
+    ],
+  },
+  {
+    chakra: "Throat Chakra",
+    questions: [
+      "I express my thoughts and feelings clearly and honestly.",
+      "I speak up for what I believe in, even when it feels uncomfortable.",
+      "I listen attentively to others without interrupting or judging.",
+      "I am honest with myself about my true thoughts and feelings.",
+      "I feel at ease communicating during difficult or emotional conversations.",
+      "I choose my words thoughtfully and say what I truly mean.",
+      "I feel heard and understood in my important relationships.",
+    ],
+  },
+  {
+    chakra: "Third Eye Chakra",
+    questions: [
+      "I trust my intuition when making decisions.",
+      "I can distinguish between fear-based thinking and genuine inner guidance.",
+      "I have a clear inner vision of what I want my life to look like.",
+      "I notice patterns and deeper meanings that others sometimes overlook.",
+      "I regularly reflect on my own thoughts, beliefs, and inner experiences.",
+      "I am open to insights and understanding that go beyond logic alone.",
+      "I can visualize outcomes and use my imagination constructively.",
+    ],
+  },
+  {
+    chakra: "Crown Chakra",
+    questions: [
+      "I feel connected to something greater than myself.",
+      "I experience moments of inner peace and stillness.",
+      "I trust the flow of life and feel guided by a higher purpose.",
+      "I am open to spiritual growth and new perspectives.",
+      "I feel a sense of unity with the world around me.",
+      "I can let go of control and surrender to life's natural flow.",
+      "I feel aligned with my higher self and values.",
+    ],
+  },
 ];
