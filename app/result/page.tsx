@@ -1,26 +1,23 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { ArrowLeft, RefreshCw, Download } from "lucide-react"
+import { ArrowLeft, RefreshCw, Download, Loader2 } from "lucide-react"
 import { useAuraStore, auraColorMap } from "@/lib/aura-store"
 import { AuraCard } from "@/components/aura-card"
 import { Button } from "@/components/ui/button"
 
 export default function ResultPage() {
-  const router  = useRouter()
+  const router = useRouter()
   const { result, reset } = useAuraStore()
   const cardRef = useRef<HTMLDivElement>(null)
+  const [downloading, setDownloading] = useState(false)
 
-  // Move redirect into useEffect — never call router during render
   useEffect(() => {
-    if (!result) {
-      router.replace("/")
-    }
+    if (!result) router.replace("/")
   }, [result, router])
 
-  // Don't render anything while redirecting
   if (!result) return null
 
   const handleReset = () => {
@@ -28,19 +25,46 @@ export default function ResultPage() {
     router.push("/")
   }
 
-  const handleDownload = () => {
-    if (result.image) {
+  const handleDownload = async () => {
+    if (!cardRef.current || downloading) return
+    setDownloading(true)
+    try {
+      const { toPng } = await import("html-to-image")
+
+      // Wait one frame so any pending animations settle
+      await new Promise(r => setTimeout(r, 120))
+
+      const dataUrl = await toPng(cardRef.current, {
+        pixelRatio: 3,          // 3× resolution — crisp on retina
+        cacheBust: true,
+        // Solid dark background so rounded corners don't show white
+        backgroundColor: "#0d0118",
+        style: {
+          // Temporarily remove box-shadow so it doesn't get clipped
+          boxShadow: "none",
+        },
+        filter: (node) => {
+          // Skip the animated particle canvas — it causes CORS taint
+          if (node instanceof HTMLCanvasElement) return false
+          return true
+        },
+      })
+
       const link = document.createElement("a")
       link.download = `aura-${result.name.toLowerCase().replace(/\s+/g, "-")}.png`
-      link.href = `data:image/png;base64,${result.image}`
+      link.href = dataUrl
       link.click()
-      return
-    }
-    if (result.imageUrl) {
-      const link = document.createElement("a")
-      link.download = `aura-${result.name.toLowerCase().replace(/\s+/g, "-")}.png`
-      link.href = result.imageUrl
-      link.click()
+    } catch (err) {
+      console.error("html-to-image failed:", err)
+      // Fallback: just save the raw aura image from backend
+      if (result.image) {
+        const link = document.createElement("a")
+        link.download = `aura-${result.name.toLowerCase().replace(/\s+/g, "-")}.png`
+        link.href = `data:image/png;base64,${result.image}`
+        link.click()
+      }
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -60,7 +84,7 @@ export default function ResultPage() {
               style={{
                 left:   ["20%", "70%", "45%"][i],
                 top:    ["25%", "55%", "80%"][i],
-                width:  400, height: 400,
+                width: 400, height: 400,
                 background: aura.color,
                 filter: "blur(120px)",
                 opacity: 0.12,
@@ -103,7 +127,8 @@ export default function ResultPage() {
         >
           <button
             onClick={handleDownload}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98]"
+            disabled={downloading}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-60"
             style={{
               background: `linear-gradient(135deg, ${primaryAura.color}cc, ${primaryAura.color}88)`,
               color: "#fff",
@@ -111,8 +136,10 @@ export default function ResultPage() {
               border: "none",
             }}
           >
-            <Download className="h-4 w-4" />
-            Save Aura Image
+            {downloading
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving card...</>
+              : <><Download className="h-4 w-4" /> Save Aura Card</>
+            }
           </button>
 
           <button
