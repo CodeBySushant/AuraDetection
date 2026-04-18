@@ -1,27 +1,36 @@
-# ai/main.py
-import base64
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from aura_pipeline import run_aura_pipeline
+import uvicorn
+import shutil
+import os
+
+from aura_pipeline import process_image  # your function
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # your Next.js port
-    allow_methods=["POST"],
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
+UPLOAD_DIR = "temp"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
 @app.post("/api/aura/process")
 async def process(file: UploadFile = File(...)):
-    image_bytes = await file.read()
-    result = run_pipeline(image_bytes)
-    return JSONResponse({
-        "emotion":    result["emotion"],
-        "confidence": result["confidence"],
-        "chakra":     result["chakra"],
-        "hex":        result["hex"],
-        "image":      base64.b64encode(result["image_bytes"]).decode()
-    })
+    try:
+        file_path = os.path.join(UPLOAD_DIR, file.filename)
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        result = process_image(file_path)
+
+        return result
+
+    except Exception as e:
+        return {"error": str(e)}
