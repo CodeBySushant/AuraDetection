@@ -1,295 +1,173 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
-import {
-  useAuraStore,
-  auraColorMap,
-  generateAuraDescription,
-} from "@/lib/aura-store";
-import { removeBackground } from "@imgly/background-removal";
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
+import { motion, AnimatePresence } from "framer-motion"
+import { useAuraStore } from "@/lib/aura-store"
+import { submitAuraForm } from "@/services/aura-api"
 
-const loadingMessages = [
+const PHASES = [
   "Scanning your energy field...",
-  "Analyzing aura patterns...",
-  "Detecting spiritual frequencies...",
-  "Mapping your chakra alignment...",
-  "Synthesizing color signatures...",
-  "Generating your unique aura...",
-];
+  "Detecting facial resonance...",
+  "Mapping chakra frequencies...",
+  "Synthesizing aura layers...",
+  "Crystallising your spectrum...",
+]
 
 export default function LoadingPage() {
-  const router = useRouter();
-  const { formData, setResult, setIsLoading } = useAuraStore();
-  const [currentMessage, setCurrentMessage] = useState(0);
-  const [progress, setProgress] = useState(0);
+  const router  = useRouter()
+  const { formData, setResult, setIsLoading } = useAuraStore()
+  const [phase, setPhase] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const called = useRef(false)
 
+  // Rotate loading messages
   useEffect(() => {
-    // Redirect if no form data
+    const interval = setInterval(() => {
+      setPhase((p) => (p + 1) % PHASES.length)
+    }, 1800)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Submit to API exactly once
+  useEffect(() => {
+    if (called.current) return
+    called.current = true
+
     if (!formData.image || !formData.name) {
-      router.push("/questionnaire");
-      return;
+      router.replace("/questionnaire")
+      return
     }
 
-    // Cycle through messages
-    const messageInterval = setInterval(() => {
-      setCurrentMessage((prev) => (prev + 1) % loadingMessages.length);
-    }, 2000);
+    setIsLoading(true)
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) return prev;
-        return prev + Math.random() * 10;
-      });
-    }, 300);
-
-    // Process the image and generate aura
-    processAura();
-
-    return () => {
-      clearInterval(messageInterval);
-      clearInterval(progressInterval);
-    };
-  }, []);
-
-  const processAura = async () => {
-    try {
-      // Remove background from image
-      let processedImageUrl = formData.imagePreview || "";
-
-      if (formData.image) {
-        try {
-          const blob = await removeBackground(formData.image, {
-            // Use single-threaded mode to avoid WASM multi-threading warnings
-            // in environments without cross-origin isolation
-            device: "cpu",
-            model: "small",
-          });
-          processedImageUrl = URL.createObjectURL(blob);
-        } catch (error) {
-          console.log(
-            "[v0] Background removal failed, using original image:",
-            error,
-          );
-          // If background removal fails, use original image
-          processedImageUrl = formData.imagePreview || "";
-        }
-      }
-
-      const processAura = async () => {
-        try {
-          const form = new FormData();
-          form.append("name", formData.name);
-          form.append("mood", formData.mood);
-          form.append("personality", formData.personality);
-          form.append("energy", String(formData.energy));
-
-          if (formData.image) {
-            form.append("image", formData.image);
-          }
-
-          const res = await fetch("/api/aura", {
-            method: "POST",
-            body: form,
-          });
-
-          const data = await res.json();
-
-          if (!res.ok) throw new Error(data.error);
-
-          // Background removal (keep this)
-          let processedImageUrl = formData.imagePreview || "";
-
-          try {
-            if (formData.image) {
-              const blob = await removeBackground(formData.image);
-              processedImageUrl = URL.createObjectURL(blob);
-            }
-          } catch (err) {
-            console.log("BG removal failed");
-          }
-
-          setResult({
-            name: formData.name,
-            colors: data.colors,
-            description: data.description,
-            imageUrl: processedImageUrl,
-          });
-
-          setProgress(100);
-          setIsLoading(false);
-          router.push("/result");
-        } catch (error) {
-          console.error(error);
-          setIsLoading(false);
-          router.push("/questionnaire");
-        }
-      };
-
-      // Set result
-      setResult({
-        colors: moodColors.map((c) => c.name),
-        description,
-        imageUrl: processedImageUrl,
-        name: formData.name,
-      });
-
-      // Complete progress and navigate
-      setProgress(100);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setIsLoading(false);
-      router.push("/result");
-    } catch (error) {
-      console.error("[v0] Error processing aura:", error);
-      setIsLoading(false);
-      router.push("/questionnaire");
-    }
-  };
-
-  const getMoodColors = (mood: string, personality: string, energy: number) => {
-    const colors: { name: string; color: string; glow: string }[] = [];
-
-    // Primary color based on mood
-    if (auraColorMap[mood]) {
-      colors.push(auraColorMap[mood]);
-    }
-
-    // Secondary color based on personality
-    const personalityColorMap: Record<string, string> = {
-      introvert: "calm",
-      extrovert: "energetic",
-      ambivert: "peaceful",
-      analytical: "intuitive",
-      creative: "creative",
-      leader: "passionate",
-    };
-
-    const secondaryMood = personalityColorMap[personality];
-    if (
-      secondaryMood &&
-      auraColorMap[secondaryMood] &&
-      auraColorMap[secondaryMood] !== colors[0]
-    ) {
-      colors.push(auraColorMap[secondaryMood]);
-    }
-
-    // Third color based on energy level
-    if (energy > 70) {
-      colors.push(auraColorMap.grounded);
-    } else if (energy < 30) {
-      colors.push(auraColorMap.peaceful);
-    } else {
-      colors.push(auraColorMap.intuitive);
-    }
-
-    // Return unique colors (max 3)
-    const uniqueColors = colors
-      .filter((c, i, arr) => arr.findIndex((x) => x.name === c.name) === i)
-      .slice(0, 3);
-
-    return uniqueColors.length > 0
-      ? uniqueColors
-      : [auraColorMap.creative, auraColorMap.calm, auraColorMap.peaceful];
-  };
+    submitAuraForm(formData, formData.name)
+      .then((result) => {
+        setResult(result)
+        router.push("/result")
+      })
+      .catch((err) => {
+        console.error("[loading] API failed:", err)
+        setError(err?.message ?? "Something went wrong")
+        setIsLoading(false)
+      })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
+    <main className="relative min-h-screen overflow-hidden flex items-center justify-center">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#1a0533] via-[#0d1b3c] to-[#1a0533]">
-        {/* Animated orbs */}
-        <motion.div
-          className="absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30 blur-[120px]"
-          animate={{
-            scale: [1, 1.3, 1],
-            rotate: [0, 180, 360],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-        />
-        <motion.div
-          className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/40 blur-[80px]"
-          animate={{
-            scale: [1.3, 1, 1.3],
-            rotate: [360, 180, 0],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-        />
+        {[
+          { color: "#8B5CF6", x: "25%", y: "30%", dur: 6 },
+          { color: "#6366F1", x: "70%", y: "60%", dur: 8 },
+          { color: "#EC4899", x: "50%", y: "80%", dur: 7 },
+        ].map((b, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              left: b.x, top: b.y,
+              width: 320, height: 320,
+              background: b.color,
+              filter: "blur(100px)",
+              opacity: 0.15,
+              transform: "translate(-50%, -50%)",
+            }}
+            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+            transition={{ duration: b.dur, repeat: Infinity, ease: "easeInOut" }}
+          />
+        ))}
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4">
-        {/* Animated rings */}
-        <div className="relative mb-12 h-48 w-48">
-          {[0, 1, 2].map((i) => (
-            <motion.div
-              key={i}
-              className="absolute inset-0 rounded-full border-2 border-primary/30"
-              animate={{
-                scale: [1, 1.5 + i * 0.3],
-                opacity: [0.6, 0],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                delay: i * 0.5,
-                ease: "easeOut",
-              }}
-            />
-          ))}
-
-          {/* Center pulse */}
-          <motion.div
-            className="absolute inset-0 flex items-center justify-center"
-            animate={{
-              scale: [0.9, 1.1, 0.9],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          >
-            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/50" />
-          </motion.div>
-        </div>
-
-        {/* Loading text */}
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={currentMessage}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="mb-8 text-center text-xl text-foreground"
-          >
-            {loadingMessages[currentMessage]}
-          </motion.p>
-        </AnimatePresence>
-
-        {/* Progress bar */}
-        <div className="w-64">
-          <div className="h-2 overflow-hidden rounded-full bg-muted">
-            <motion.div
-              className="h-full bg-gradient-to-r from-primary to-accent"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.3 }}
-            />
+      <div className="relative z-10 flex flex-col items-center gap-10 px-8 text-center">
+        {error ? (
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-red-400 text-lg font-medium">{error}</p>
+            <button
+              onClick={() => router.push("/questionnaire")}
+              className="px-6 py-3 rounded-full text-white text-sm font-medium"
+              style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)" }}
+            >
+              Try Again
+            </button>
           </div>
-          <p className="mt-2 text-center text-sm text-muted-foreground">
-            {Math.round(progress)}%
-          </p>
-        </div>
+        ) : (
+          <>
+            {/* Animated orb */}
+            <div className="relative" style={{ width: 160, height: 160 }}>
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    border: "1.5px solid rgba(139,92,246,0.4)",
+                  }}
+                  animate={{ scale: [1, 1.5 + i * 0.3, 1], opacity: [0.6, 0, 0.6] }}
+                  transition={{
+                    duration: 2.5,
+                    repeat: Infinity,
+                    delay: i * 0.7,
+                    ease: "easeOut",
+                  }}
+                />
+              ))}
+              <motion.div
+                className="absolute inset-4 rounded-full"
+                style={{
+                  background: "radial-gradient(circle, #8B5CF6 0%, #4F46E5 60%, #1E1B4B 100%)",
+                  boxShadow: "0 0 40px rgba(139,92,246,0.6)",
+                }}
+                animate={{ scale: [0.95, 1.05, 0.95] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              {/* Inner symbol */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <motion.span
+                  style={{ fontSize: 36, color: "rgba(255,255,255,0.9)" }}
+                  animate={{ rotate: [0, 360] }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                >
+                  ✦
+                </motion.span>
+              </div>
+            </div>
+
+            {/* Phase text */}
+            <div style={{ height: 32 }}>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={phase}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-base font-medium"
+                  style={{ color: "rgba(255,255,255,0.7)", letterSpacing: "0.03em" }}
+                >
+                  {PHASES[phase]}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+
+            {/* Progress dots */}
+            <div className="flex gap-2">
+              {PHASES.map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="rounded-full"
+                  style={{
+                    width: 6,
+                    height: 6,
+                    background: i === phase ? "#8B5CF6" : "rgba(255,255,255,0.2)",
+                  }}
+                  animate={{ scale: i === phase ? 1.4 : 1 }}
+                  transition={{ duration: 0.3 }}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </main>
-  );
+  )
 }

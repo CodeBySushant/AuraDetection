@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/frontend/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuraStore, moodOptions, personalityOptions } from "@/lib/aura-store"
 import Link from "next/link"
 import { chakraQuestions } from "@/data/chakraQuestions";
@@ -41,11 +41,11 @@ export default function QuestionnairePage() {
   })
 
   const steps = [
-    { icon: User, title: "Your Name", field: "name" },
-    { icon: Sparkles, title: "Current Mood", field: "mood" },
-    { icon: Brain, title: "Personality", field: "personality" },
-    { icon: Zap, title: "Energy Level", field: "energy" },
-    { icon: ImageIcon, title: "Your Photo", field: "image" },
+    { icon: User,      title: "Your Name",   field: "name" },
+    { icon: Sparkles,  title: "Current Mood", field: "mood" },
+    { icon: Brain,     title: "Personality",  field: "personality" },
+    { icon: Zap,       title: "Energy Level", field: "energy" },
+    { icon: ImageIcon, title: "Your Photo",   field: "image" },
   ]
 
   const validateStep = () => {
@@ -100,6 +100,7 @@ export default function QuestionnairePage() {
             {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </div>
         )
+
       case 1:
         return (
           <div className="space-y-4">
@@ -119,6 +120,7 @@ export default function QuestionnairePage() {
             {errors.mood && <p className="text-sm text-destructive">{errors.mood}</p>}
           </div>
         )
+
       case 2:
         return (
           <div className="space-y-4">
@@ -138,6 +140,7 @@ export default function QuestionnairePage() {
             {errors.personality && <p className="text-sm text-destructive">{errors.personality}</p>}
           </div>
         )
+
       case 3:
         return (
           <div className="space-y-6">
@@ -158,6 +161,7 @@ export default function QuestionnairePage() {
             </div>
           </div>
         )
+
       case 4:
         return (
           <div className="space-y-4">
@@ -188,7 +192,7 @@ export default function QuestionnairePage() {
                     <Upload className="h-8 w-8 text-primary" />
                   </div>
                   <div>
-                    <p className="text-foreground">Drag & drop your photo here</p>
+                    <p className="text-foreground">Drag &amp; drop your photo here</p>
                     <p className="mt-1 text-sm text-muted-foreground">or click to browse</p>
                   </div>
                 </div>
@@ -200,6 +204,7 @@ export default function QuestionnairePage() {
             </p>
           </div>
         )
+
       default:
         return null
     }

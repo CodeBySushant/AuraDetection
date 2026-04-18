@@ -1,190 +1,156 @@
-import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
-import path from "path";
-import fs from "fs/promises";
+import { NextRequest, NextResponse } from "next/server"
 
-// Aura color mapping
-const auraColorMap: Record<
-  string,
-  { name: string; color: string; glow: string }
-> = {
-  happy: { name: "Yellow", color: "#FFD700", glow: "rgba(255, 215, 0, 0.6)" },
-  calm: { name: "Blue", color: "#4169E1", glow: "rgba(65, 105, 225, 0.6)" },
-  energetic: { name: "Red", color: "#FF4444", glow: "rgba(255, 68, 68, 0.6)" },
-  creative: { name: "Purple", color: "#8B5CF6", glow: "rgba(139, 92, 246, 0.6)" },
-  peaceful: { name: "Green", color: "#22C55E", glow: "rgba(34, 197, 94, 0.6)" },
-  intuitive: { name: "Indigo", color: "#6366F1", glow: "rgba(99, 102, 241, 0.6)" },
-  passionate: { name: "Pink", color: "#EC4899", glow: "rgba(236, 72, 153, 0.6)" },
-  grounded: { name: "Orange", color: "#F97316", glow: "rgba(249, 115, 22, 0.6)" },
-};
+const emotionColorMap: Record<string, string> = {
+  happy:    "Yellow",
+  sad:      "Blue",
+  angry:    "Red",
+  fear:     "Purple",
+  disgust:  "Green",
+  surprise: "Orange",
+  neutral:  "Indigo",
+}
 
-// Personality → emotion mapping
 const personalityEmotionMap: Record<string, string> = {
-  introvert: "calm",
-  extrovert: "energetic",
-  ambivert: "peaceful",
+  introvert:  "calm",
+  extrovert:  "energetic",
+  ambivert:   "peaceful",
   analytical: "intuitive",
-  creative: "creative",
-  leader: "passionate",
-};
+  creative:   "creative",
+  leader:     "passionate",
+}
 
-// Generate description
+const emotionToColorName: Record<string, string> = {
+  calm:       "Blue",
+  energetic:  "Red",
+  peaceful:   "Green",
+  intuitive:  "Indigo",
+  creative:   "Purple",
+  passionate: "Pink",
+  grounded:   "Orange",
+}
+
 function generateDescription(
   colors: string[],
   name: string,
-  mood: string,
-  personality: string
+  emotion: string,
+  personality: string,
+  chakra: string
 ): string {
-  const descriptions: Record<string, string> = {
-    Yellow: "radiates warmth and optimism",
-    Blue: "emanates tranquility and wisdom",
-    Red: "pulses with vitality and passion",
-    Purple: "shimmers with creativity and mysticism",
-    Green: "flows with harmony and growth",
-    Indigo: "glows with intuition and depth",
-    Pink: "sparkles with love and compassion",
-    Orange: "burns with enthusiasm and confidence",
-  };
-
-  const colorDescriptions = colors
-    .map((c) => descriptions[c] || "glows mysteriously")
-    .join(", ");
-
-  return `${name}, your aura ${colorDescriptions}. As a ${personality} with a ${mood} energy, you possess a unique blend of spiritual frequencies. Your dominant colors reveal a soul that seeks balance while embracing transformation.`;
+  const desc: Record<string, string> = {
+    Yellow: "radiates warmth, joy, and solar vitality",
+    Blue:   "flows with tranquility, depth, and inner wisdom",
+    Red:    "pulses with raw passion, strength, and fire",
+    Purple: "shimmers with mysticism, intuition, and creativity",
+    Green:  "breathes with harmony, healing, and natural growth",
+    Indigo: "glows with deep intuition, clarity, and cosmic connection",
+    Pink:   "sparkles with love, compassion, and gentle power",
+    Orange: "burns with enthusiasm, confidence, and creative spark",
+  }
+  const colorText = colors
+    .map((c) => desc[c] ?? "pulses with mysterious energy")
+    .join(", and ")
+  return `${name}, your aura ${colorText}. Your ${personality} spirit, anchored in the ${chakra} Chakra, resonates at a frequency of transformation and authentic presence.`
 }
 
 export async function POST(request: NextRequest) {
-  let tempPath = "";
-
   try {
-    const formData = await request.formData();
+    const formData = await request.formData()
 
-    const name = formData.get("name") as string;
-    const mood = formData.get("mood") as string;
-    const personality = formData.get("personality") as string;
-    const energy = parseInt(formData.get("energy") as string) || 50;
-    const image = formData.get("image") as File | null;
+    const name        = formData.get("name")        as string
+    const mood        = formData.get("mood")        as string
+    const personality = formData.get("personality") as string
+    const energy      = parseInt(formData.get("energy") as string) || 50
+    const image       = formData.get("image")       as File | null
 
     if (!name || !mood || !personality || !image) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields: name, mood, personality, image" },
         { status: 400 }
-      );
+      )
     }
 
-    // ✅ Save temp image
-    tempPath = path.join(process.cwd(), `temp-${Date.now()}.png`);
-    await fs.writeFile(tempPath, Buffer.from(await image.arrayBuffer()));
-
-    // ✅ Cross-platform python command
-    const pythonCmd = process.platform === "win32" ? "python" : "python3";
-
-    // ✅ Call Python AI
-    const aiData: any = await new Promise((resolve, reject) => {
-      const python = spawn(pythonCmd, [
-        path.join(process.cwd(), "ai/main.py"),
-        tempPath,
-      ]);
-
-      let output = "";
-
-      python.stdout.on("data", (data) => {
-        output += data.toString();
-      });
-
-      python.stderr.on("data", (err) => {
-        console.error("PYTHON ERROR:", err.toString());
-      });
-
-      python.on("close", () => {
-        try {
-          resolve(JSON.parse(output));
-        } catch {
-          reject("Invalid AI response");
-        }
-      });
-    });
-
-    // ✅ Safety check
-    if (!aiData || !aiData.emotion) {
-      return NextResponse.json(
-        { error: "AI failed to detect emotion" },
-        { status: 500 }
-      );
+    // ── Forward image to Python FastAPI backend ──────────────────
+    let aiData: {
+      emotion: string
+      confidence: number
+      chakra: string
+      hex: string
+      image: string // base64
     }
 
-    // 🔥 Color logic
-    const colors: string[] = [];
+    try {
+      const pyForm = new FormData()
+      pyForm.append("file", image)
 
-    // Primary (AI emotion)
-    if (auraColorMap[aiData.emotion]) {
-      colors.push(auraColorMap[aiData.emotion].name);
-    } else {
-      colors.push("Purple"); // fallback
-    }
+      const pyRes = await fetch("http://localhost:8001/api/aura/process", {
+        method: "POST",
+        body:   pyForm,
+      })
 
-    // Mood
-    if (auraColorMap[mood]) {
-      const moodColor = auraColorMap[mood].name;
-      if (!colors.includes(moodColor)) {
-        colors.push(moodColor);
+      if (!pyRes.ok) {
+        const err = await pyRes.json().catch(() => ({}))
+        console.error("[route] Python backend error:", err)
+        throw new Error("Python backend returned non-OK status")
+      }
+
+      aiData = await pyRes.json()
+    } catch (backendErr) {
+      // Graceful fallback if Python backend is not running
+      console.warn("[route] Backend unavailable, using fallback:", backendErr)
+      aiData = {
+        emotion:    "neutral",
+        confidence: 0.5,
+        chakra:     "Heart",
+        hex:        "#32C878",
+        image:      "",
       }
     }
 
-    // Personality
-    const personalityEmotion = personalityEmotionMap[personality];
-    if (personalityEmotion && auraColorMap[personalityEmotion]) {
-      const pColor = auraColorMap[personalityEmotion].name;
-      if (!colors.includes(pColor)) {
-        colors.push(pColor);
-      }
-    }
+    // ── Build color array ────────────────────────────────────────
+    const colors: string[] = []
 
-    // Energy influence
-    if (energy > 80 && !colors.includes("Orange")) {
-      colors.push("Orange");
-    } else if (energy < 30 && !colors.includes("Green")) {
-      colors.push("Green");
-    }
+    // 1. Primary: AI-detected emotion
+    const primaryColor = emotionColorMap[aiData.emotion] ?? "Indigo"
+    colors.push(primaryColor)
 
-    // Ensure minimum colors
-    if (colors.length < 2) {
-      colors.push("Purple");
-    }
+    // 2. Secondary: user-selected mood
+    const moodColor = emotionColorMap[mood]
+    if (moodColor && !colors.includes(moodColor)) colors.push(moodColor)
 
-    const finalColors = colors.slice(0, 3);
+    // 3. Tertiary: personality archetype
+    const persEmotion = personalityEmotionMap[personality]
+    const persColor   = persEmotion ? emotionToColorName[persEmotion] : null
+    if (persColor && !colors.includes(persColor)) colors.push(persColor)
 
-    // Description
+    // 4. Energy modifier
+    if (energy > 80 && !colors.includes("Orange")) colors.push("Orange")
+    else if (energy < 30 && !colors.includes("Green")) colors.push("Green")
+
+    const finalColors = [...new Set(colors)].slice(0, 3)
+    if (finalColors.length < 2) finalColors.push("Purple")
+
     const description = generateDescription(
       finalColors,
       name,
-      aiData.emotion || mood,
-      personality
-    );
+      aiData.emotion,
+      personality,
+      aiData.chakra
+    )
 
-    // ✅ Response
     return NextResponse.json({
       success: true,
       data: {
-        colors: finalColors,
+        colors:      finalColors,
         description,
-        emotion: aiData.emotion,
-        confidence: aiData.confidence,
-        chakra: aiData.chakra,
+        emotion:     aiData.emotion,
+        confidence:  aiData.confidence,
+        chakra:      aiData.chakra,
+        hex:         aiData.hex,
+        image:       aiData.image, // base64 PNG from Python
       },
-    });
+    })
   } catch (error) {
-    console.error("Aura API error:", error);
-
-    return NextResponse.json(
-      { error: "Failed to process aura" },
-      { status: 500 }
-    );
-  } finally {
-    if (tempPath) {
-      try {
-        await fs.unlink(tempPath);
-      } catch {}
-    }
+    console.error("[route] Aura API error:", error)
+    return NextResponse.json({ error: "Failed to process aura" }, { status: 500 })
   }
 }
