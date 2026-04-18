@@ -7,9 +7,9 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Aura Card Generator - Discover Your Energy',
+  title: 'Aura Analysis - Discover Your Energy',
   description: 'Uncover your hidden energy through AI. Generate a personalized aura card based on your personality and mood.',
-  generator: 'v0.app',
+  generator: 'sushant.app',
   icons: {
     icon: [
       {
