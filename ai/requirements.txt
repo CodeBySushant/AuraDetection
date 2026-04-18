@@ -1,22 +1,37 @@
-# ── Core ML deps ────────────────────────────────────────────────────
-numpy==2.0.2
-onnxruntime==1.19.2
+# # ── Core ML deps ────────────────────────────────────────────────────
+# numpy==2.0.2
+# onnxruntime==1.19.2
 
-# ── Background removal ───────────────────────────────────────────────
+# # ── Background removal ───────────────────────────────────────────────
+# rembg==2.0.57
+
+# # ── Image processing ─────────────────────────────────────────────────
+# Pillow==10.4.0
+# # Use headless opencv — no GUI deps needed on server (avoids libGL conflicts)
+# opencv-python-headless==4.10.0.84
+
+# # ── Emotion detection ────────────────────────────────────────────────
+# # tensorflow must be explicit — deepface won't pin it and pulls latest
+# tensorflow-cpu==2.17.0 
+# tf-keras==2.17.0            
+# deepface==0.0.93
+
+# # ── FastAPI server ───────────────────────────────────────────────────
+# fastapi==0.115.0
+# uvicorn[standard]==0.30.6
+# python-multipart==0.0.12
+
+
+fastapi
+uvicorn[standard]
+python-multipart
+
 rembg==2.0.57
+onnxruntime==1.16.3
 
-# ── Image processing ─────────────────────────────────────────────────
-Pillow==10.4.0
-# Use headless opencv — no GUI deps needed on server (avoids libGL conflicts)
 opencv-python-headless==4.10.0.84
+Pillow==10.4.0
+numpy==1.26.4
 
-# ── Emotion detection ────────────────────────────────────────────────
-# tensorflow must be explicit — deepface won't pin it and pulls latest
-tensorflow-cpu==2.17.0 
-tf-keras==2.17.0            
 deepface==0.0.93
-
-# ── FastAPI server ───────────────────────────────────────────────────
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-python-multipart==0.0.12
+tf-keras
