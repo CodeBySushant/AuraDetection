@@ -9,27 +9,33 @@ export interface AuraFormData {
   imagePreview: string
 }
 
+export interface EmotionScore {
+  emotion: string
+  score: number
+}
+
 export interface AuraResult {
   name: string
   colors: string[]
   description: string
-  imageUrl: string       // object URL (local blob)
-  image?: string         // base64 from backend
+  imageUrl: string
+  image?: string
   emotion: string
   confidence: number
   chakra: string
   hex: string
+  all_scores?: Record<string, number>
+  ranked_emotions?: EmotionScore[]
 }
 
 interface AuraStore {
   formData: AuraFormData
   result: AuraResult | null
   isLoading: boolean
-
-  setFormData: (data: Partial<AuraFormData>) => void
-  setResult:   (result: AuraResult) => void
-  setIsLoading:(loading: boolean) => void
-  reset:       () => void
+  setFormData:  (data: Partial<AuraFormData>) => void
+  setResult:    (result: AuraResult) => void
+  setIsLoading: (loading: boolean) => void
+  reset:        () => void
 }
 
 export const auraColorMap: Record<string, { name: string; color: string; glow: string }> = {
@@ -57,6 +63,12 @@ export const auraColorMap: Record<string, { name: string; color: string; glow: s
   orange:     { name: "Orange",  color: "#F97316", glow: "rgba(249,115,22,0.6)"  },
 }
 
+export function getAuraImageSrc(result: AuraResult): string {
+  if (result.image) return `data:image/png;base64,${result.image}`
+  if (result.imageUrl) return result.imageUrl
+  return ""
+}
+
 export const moodOptions = [
   { value: "happy",      label: "😊 Happy" },
   { value: "calm",       label: "😌 Calm" },
@@ -77,35 +89,16 @@ export const personalityOptions = [
   { value: "leader",     label: "👑 Leader" },
 ]
 
-export function getAuraImageSrc(result: AuraResult): string {
-  if (result.imageUrl) return result.imageUrl
-  if (result.image) return `data:image/png;base64,${result.image}`
-  return ""
-}
-
 const defaultFormData: AuraFormData = {
-  name: "",
-  mood: "",
-  personality: "",
-  energy: 50,
-  image: null,
-  imagePreview: "",
+  name: "", mood: "", personality: "", energy: 50, image: null, imagePreview: "",
 }
 
 export const useAuraStore = create<AuraStore>((set) => ({
   formData:  defaultFormData,
   result:    null,
   isLoading: false,
-
-  setFormData: (data) =>
-    set((state) => ({ formData: { ...state.formData, ...data } })),
-
-  setResult: (result) =>
-    set({ result, isLoading: false }),
-
-  setIsLoading: (loading) =>
-    set({ isLoading: loading }),
-
-  reset: () =>
-    set({ formData: defaultFormData, result: null, isLoading: false }),
+  setFormData: (data) => set((state) => ({ formData: { ...state.formData, ...data } })),
+  setResult:   (result) => set({ result, isLoading: false }),
+  setIsLoading:(loading) => set({ isLoading: loading }),
+  reset:       () => set({ formData: defaultFormData, result: null, isLoading: false }),
 }))

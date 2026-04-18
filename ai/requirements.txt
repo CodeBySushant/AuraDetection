@@ -1,0 +1,13 @@
+# ── Pinned to match Colab notebook Cell 1 exactly ──────────────────
+numpy==2.0.2
+onnxruntime==1.19.2
+rembg==2.0.57
+Pillow==10.4.0
+deepface==0.0.93
+tf-keras
+opencv-python-headless==4.10.0.84
+
+# ── FastAPI server ───────────────────────────────────────────────────
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.12    # required for FastAPI File() uploads

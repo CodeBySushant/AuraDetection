@@ -34,7 +34,9 @@ function generateDescription(
   name: string,
   emotion: string,
   personality: string,
-  chakra: string
+  chakra: string,
+  confidence: number,
+  rankedEmotions?: { emotion: string; score: number }[]
 ): string {
   const desc: Record<string, string> = {
     Yellow: "radiates warmth, joy, and solar vitality",
@@ -46,21 +48,36 @@ function generateDescription(
     Pink:   "sparkles with love, compassion, and gentle power",
     Orange: "burns with enthusiasm, confidence, and creative spark",
   }
+
   const colorText = colors
     .map((c) => desc[c] ?? "pulses with mysterious energy")
     .join(", and ")
-  return `${name}, your aura ${colorText}. Your ${personality} spirit, anchored in the ${chakra} Chakra, resonates at a frequency of transformation and authentic presence.`
+
+  // Add secondary emotion nuance if available
+  let nuance = ""
+  if (rankedEmotions && rankedEmotions.length > 1) {
+    const second = rankedEmotions[1]
+    if (second.score > 10) {
+      nuance = ` Traces of ${second.emotion} weave through your field at ${Math.round(second.score)}%.`
+    }
+  }
+
+  const intensityWord =
+    confidence > 0.8 ? "powerfully" :
+    confidence > 0.6 ? "strongly" :
+    confidence > 0.4 ? "clearly" : "gently"
+
+  return `${name}, your aura ${intensityWord} ${colorText}. Your ${personality} spirit, anchored in the ${chakra} Chakra, resonates at a frequency of transformation.${nuance}`
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-
-    const name        = formData.get("name")        as string
-    const mood        = formData.get("mood")        as string
-    const personality = formData.get("personality") as string
-    const energy      = parseInt(formData.get("energy") as string) || 50
-    const image       = formData.get("image")       as File | null
+    const formData   = await request.formData()
+    const name       = formData.get("name")        as string
+    const mood       = formData.get("mood")        as string
+    const personality= formData.get("personality") as string
+    const energy     = parseInt(formData.get("energy") as string) || 50
+    const image      = formData.get("image")       as File | null
 
     if (!name || !mood || !personality || !image) {
       return NextResponse.json(
@@ -69,13 +86,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ── Forward image to Python FastAPI backend ──────────────────
+    // ── Forward to Python backend ─────────────────────────────────────────────
     let aiData: {
       emotion: string
       confidence: number
       chakra: string
       hex: string
-      image: string // base64
+      image: string
+      all_scores: Record<string, number>
+      ranked_emotions: { emotion: string; score: number }[]
     }
 
     try {
@@ -90,39 +109,50 @@ export async function POST(request: NextRequest) {
       if (!pyRes.ok) {
         const err = await pyRes.json().catch(() => ({}))
         console.error("[route] Python backend error:", err)
-        throw new Error("Python backend returned non-OK status")
+        throw new Error(`Backend error: ${JSON.stringify(err)}`)
       }
 
       aiData = await pyRes.json()
     } catch (backendErr) {
-      // Graceful fallback if Python backend is not running
       console.warn("[route] Backend unavailable, using fallback:", backendErr)
+      // Fallback — never silently same-output; vary by mood at least
       aiData = {
-        emotion:    "neutral",
+        emotion:    mood in emotionColorMap ? mood : "neutral",
         confidence: 0.5,
         chakra:     "Heart",
         hex:        "#32C878",
         image:      "",
+        all_scores: { neutral: 100 },
+        ranked_emotions: [{ emotion: "neutral", score: 100 }],
       }
     }
 
-    // ── Build color array ────────────────────────────────────────
+    // ── Build color array ──────────────────────────────────────────────────────
     const colors: string[] = []
 
-    // 1. Primary: AI-detected emotion
+    // 1. Primary — AI-detected emotion
     const primaryColor = emotionColorMap[aiData.emotion] ?? "Indigo"
     colors.push(primaryColor)
 
-    // 2. Secondary: user-selected mood
+    // 2. Secondary — 2nd highest DeepFace score (if >10%)
+    if (aiData.ranked_emotions?.length > 1) {
+      const second = aiData.ranked_emotions[1]
+      if (second.score > 10) {
+        const secColor = emotionColorMap[second.emotion]
+        if (secColor && !colors.includes(secColor)) colors.push(secColor)
+      }
+    }
+
+    // 3. User mood if different
     const moodColor = emotionColorMap[mood]
     if (moodColor && !colors.includes(moodColor)) colors.push(moodColor)
 
-    // 3. Tertiary: personality archetype
+    // 4. Personality
     const persEmotion = personalityEmotionMap[personality]
     const persColor   = persEmotion ? emotionToColorName[persEmotion] : null
     if (persColor && !colors.includes(persColor)) colors.push(persColor)
 
-    // 4. Energy modifier
+    // 5. Energy modifier
     if (energy > 80 && !colors.includes("Orange")) colors.push("Orange")
     else if (energy < 30 && !colors.includes("Green")) colors.push("Green")
 
@@ -134,19 +164,23 @@ export async function POST(request: NextRequest) {
       name,
       aiData.emotion,
       personality,
-      aiData.chakra
+      aiData.chakra,
+      aiData.confidence,
+      aiData.ranked_emotions,
     )
 
     return NextResponse.json({
       success: true,
       data: {
-        colors:      finalColors,
+        colors:          finalColors,
         description,
-        emotion:     aiData.emotion,
-        confidence:  aiData.confidence,
-        chakra:      aiData.chakra,
-        hex:         aiData.hex,
-        image:       aiData.image, // base64 PNG from Python
+        emotion:         aiData.emotion,
+        confidence:      aiData.confidence,
+        chakra:          aiData.chakra,
+        hex:             aiData.hex,
+        image:           aiData.image,
+        all_scores:      aiData.all_scores,
+        ranked_emotions: aiData.ranked_emotions,
       },
     })
   } catch (error) {

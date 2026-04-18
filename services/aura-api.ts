@@ -24,25 +24,21 @@ export async function submitAuraForm(
   }
 
   const json = await res.json()
-
-  if (!json.success || !json.data) {
-    throw new Error("Invalid response from API")
-  }
+  if (!json.success || !json.data) throw new Error("Invalid response from API")
 
   const d = json.data
 
-  // Build imageUrl from base64 if available
-  let imageUrl = formData.imagePreview ?? ""
-
   return {
     name,
-    colors:      d.colors,
-    description: d.description,
-    imageUrl,
-    image:       d.image,   // base64 from Python (bg-removed aura image)
-    emotion:     d.emotion,
-    confidence:  d.confidence,
-    chakra:      d.chakra,
-    hex:         d.hex,
+    colors:          d.colors,
+    description:     d.description,
+    imageUrl:        formData.imagePreview ?? "",
+    image:           d.image,             // base64 aura PNG from Python
+    emotion:         d.emotion,
+    confidence:      d.confidence,
+    chakra:          d.chakra,
+    hex:             d.hex,
+    all_scores:      d.all_scores,        // NEW
+    ranked_emotions: d.ranked_emotions,   // NEW
   }
 }
