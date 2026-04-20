@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       pyForm.append("file", blob, image.name);
 
       console.log("🚀 Sending image to Python backend...");
-      const pyRes = await fetch("http://localhost:8001/api/aura/process", {
+      const pyRes = await fetch(`${process.env.BACKEND_URL}/api/aura/process`, {
         method: "POST",
         body: pyForm,
       });

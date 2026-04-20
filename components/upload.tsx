@@ -7,7 +7,7 @@ const handleUpload = async () => {
   try {
     setLoading();
 
-    const result = await detectAura(imageBase64);
+    const result = await submitAuraForm(formData, name);
 
     setAuraResult(result);
   } catch (err) {

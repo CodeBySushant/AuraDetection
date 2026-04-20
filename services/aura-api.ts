@@ -13,7 +13,7 @@ export async function submitAuraForm(
   fd.append("energy",      String(formData.energy))
   fd.append("image",       formData.image)
 
-  const res = await fetch("/api/aura", {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/aura/process`, {
     method: "POST",
     body:   fd,
   })
