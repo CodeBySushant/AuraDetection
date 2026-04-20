@@ -122,11 +122,14 @@ export async function POST(request: NextRequest) {
 
       aiData = await pyRes.json();
       console.log("✅ Python response:", aiData);
-    } catch (backendErr) {
+    } catch (backendErr: any) {
       console.error("❌ Python backend FAILED:", backendErr);
 
       return NextResponse.json(
-        { error: "Python backend not running on port 8001" },
+        {
+          error: "Backend connection failed",
+          details: backendErr?.message || backendErr,
+        },
         { status: 500 },
       );
     }
